@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de costos — CataMar</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ocean: #0B4F6C; --ocean-mid: #1A7A9A; --ocean-light: #E8F4F8;
+    --coral: #E05A3A; --coral-light: #FDF0EC;
+    --sand: #F7F3EE; --sand-dark: #EDE8E1;
+    --text-primary: #1A1A1A; --text-secondary: #5A5A5A; --text-muted: #8A8A8A;
+    --border: #D8D2CA; --white: #FFFFFF;
+    --green: #2A7A4F; --green-light: #EAF5EE;
+    --amber: #A05C10; --amber-light: #FDF3E3;
+    --red: #B23B2E; --red-light: #FBEAE7;
+    --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
+  }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--sand); color: var(--text-primary); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+  header { background: var(--ocean); color: white; padding: 28px 24px 24px; position: relative; overflow: hidden; }
+  header::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 20px; background: var(--sand); border-radius: 20px 20px 0 0; }
+  .header-eyebrow { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+  .header-title { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .header-sub { font-size: 13px; color: rgba(255,255,255,0.65); }
+  .header-wave { position: absolute; right: 20px; top: 16px; font-size: 52px; opacity: 0.12; line-height: 1; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+  .mode-toggle { display: flex; background: var(--sand-dark); border-radius: 99px; padding: 4px; gap: 4px; margin-bottom: 20px; }
+  .mode-btn { flex: 1; padding: 9px 12px; border-radius: 99px; border: none; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.18s; text-align: center; }
+  .mode-btn.active { background: var(--ocean); color: white; box-shadow: 0 2px 8px rgba(11,79,108,0.25); }
+  .tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 9px 18px; border: none; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1.5px; white-space: nowrap; transition: color 0.15s; }
+  .tab-btn.active { color: var(--ocean); border-bottom-color: var(--ocean); }
+  .card { background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 18px 20px; margin-bottom: 14px; }
+  .card-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
+  .ing-header, .ing-row { display: grid; grid-template-columns: 1fr 60px 70px 70px 90px; gap: 6px; align-items: center; font-size: 13px; }
+  .ing-header { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; padding-bottom: 8px; border-bottom: 1px solid var(--sand-dark); margin-bottom: 4px; }
+  .ing-row { padding: 7px 0; border-bottom: 1px solid var(--sand-dark); }
+  .ing-row:last-child { border-bottom: none; }
+  .ing-name { color: var(--text-primary); }
+  .ta-right { text-align: right; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .cost-val { color: var(--green); font-weight: 600; text-align: right; }
+  .protein-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+  .protein-card { background: var(--ocean-light); border-radius: var(--radius-md); padding: 14px; border: 1px solid rgba(11,79,108,0.12); }
+  .protein-card-name { font-size: 12px; font-weight: 600; color: var(--ocean); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .protein-card-cost { font-size: 24px; font-weight: 700; color: var(--ocean); line-height: 1.1; }
+  .protein-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .protein-card-merma { font-size: 11px; color: var(--amber); margin-top: 6px; font-weight: 500; }
+  .margin-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 16px; }
+  .margin-row label { font-size: 13px; color: var(--text-secondary); white-space: nowrap; font-weight: 500; }
+  .margin-row input[type=range] { flex: 1; accent-color: var(--ocean); }
+  .margin-val { font-size: 16px; font-weight: 700; color: var(--ocean); min-width: 44px; text-align: right; }
+  .hint-box { display: flex; align-items: center; gap: 10px; background: var(--sand-dark); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: var(--text-secondary); }
+  .summary-table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); margin-bottom: 14px; }
+  .summary-table th { text-align: center; padding: 10px 8px; font-size: 12px; font-weight: 600; color: var(--text-muted); background: var(--sand-dark); border-bottom: 1px solid var(--border); }
+  .summary-table th:first-child { text-align: left; padding-left: 16px; }
+  .summary-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid var(--sand-dark); cursor: pointer; transition: background 0.12s; }
+  .summary-table td:hover { background: var(--ocean-light); }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr.row-tostada td { border-top: 1.5px solid var(--border); }
+  .summary-table td:first-child { text-align: left; padding-left: 16px; font-size: 13px; font-weight: 500; color: var(--text-primary); cursor: default; white-space: nowrap; }
+  .summary-table td:first-child:hover { background: transparent; }
+  .cell-cost { font-size: 11px; color: var(--text-muted); }
+  .cell-price { font-size: 19px; font-weight: 700; color: var(--ocean); line-height: 1.3; }
+  .cell-selected { outline: 2px solid var(--ocean); outline-offset: -2px; }
+  .market-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 14px; }
+  .market-track { position: relative; height: 6px; border-radius: 99px; background: linear-gradient(to right, var(--green-light), var(--red-light)); margin: 4px 6px 10px; }
+  .market-dot { position: absolute; top: -5px; width: 16px; height: 16px; border-radius: 50%; background: var(--white); transform: translateX(-50%); box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .market-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .market-legend span.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: -1px; }
+  .detail-panel { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .detail-header { background: var(--ocean); color: white; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
+  .detail-label { font-size: 15px; font-weight: 600; }
+  .detail-sub { font-size: 12px; opacity: 0.75; }
+  .detail-empty { text-align: center; padding: 30px 18px; color: var(--text-muted); font-size: 13px; }
+  .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--sand-dark); }
+  .metric { padding: 14px 16px; border-right: 1px solid var(--sand-dark); text-align: center; }
+  .metric:last-child { border-right: none; }
+  .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .metric-val { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+  .metric-val.green { color: var(--green); }
+  .metric-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .detail-table td { padding: 8px 18px; border-bottom: 1px solid var(--sand-dark); color: var(--text-secondary); }
+  .detail-table td:last-child { text-align: right; font-weight: 500; color: var(--text-primary); }
+  .detail-table tr:last-child td { border-bottom: none; }
+  .detail-table tr.total td { background: var(--sand); font-weight: 700; color: var(--text-primary); border-top: 1.5px solid var(--border); }
+  .detail-table tr.total td:last-child { color: var(--coral); font-size: 15px; }
+  .detail-table tr.subtotal td { background: var(--ocean-light); font-weight: 600; color: var(--ocean); }
+  select { padding: 7px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--white); color: var(--text-primary); font-size: 13px; cursor: pointer; }
+  footer { text-align: center; font-size: 12px; color: var(--text-muted); padding: 24px 16px; border-top: 1px solid var(--border); margin-top: 12px; }
+  @media (max-width: 480px) {
+    .protein-grid { grid-template-columns: 1fr; }
+    .metrics-row { grid-template-columns: 1fr; }
+    .metric { border-right: none; border-bottom: 1px solid var(--sand-dark); }
+    .metric:last-child { border-bottom: none; }
+    .ing-header, .ing-row { grid-template-columns: 1fr 55px 60px 80px; }
+    .ing-header span:nth-child(3), .ing-row .merma-col { display: none; }
+    .summary-table th, .summary-table td { padding: 8px 4px; }
+    .cell-price { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-wave">🌊</div>
+  <p class="header-eyebrow">Herramienta de costeo</p>
+  <h1 class="header-title">CataMar</h1>
+  <p class="header-sub">Ceviches · 3 proteínas · 3 presentaciones + tostada · costos reales completos</p>
+</header>
+<main>
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('low')" id="btn-low">Temporada baja (precios actuales)</button>
+    <button class="mode-btn" onclick="setMode('high')" id="btn-high">Temporada alta (precio máximo)</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('resumen')" id="tab-resumen">Resumen</button>
+    <button class="tab-btn" onclick="showTab('ingredientes')" id="tab-ingredientes">Ingredientes</button>
+    <button class="tab-btn" onclick="showTab('proteinas')" id="tab-proteinas">Proteínas</button>
+    <button class="tab-btn" onclick="showTab('operacion')" id="tab-operacion">Operación</button>
+  </div>
+
+  <!-- RESUMEN -->
+  <div id="pane-resumen">
+    <div class="margin-row">
+      <label>Margen deseado</label>
+      <input type="range" min="20" max="70" value="50" step="1" id="margin-slider"
+        oninput="document.getElementById('margin-out').textContent=this.value+'%'; renderResumen(); if(window.lastSelected) showDetail(lastSelected.p, lastSelected.k);">
+      <span class="margin-val" id="margin-out">50%</span>
+    </div>
+    <div class="hint-box">
+      <span>💡</span>
+      <span>Toca cualquier precio de la tabla para ver su desglose completo de ingredientes y costos.</span>
+    </div>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Presentación</th>
+          <th>Camarón</th>
+          <th>Tilapia</th>
+          <th>Atún</th>
+        </tr>
+      </thead>
+      <tbody id="summary-body"></tbody>
+    </table>
+    <div class="market-card">
+      <div class="card-title" style="margin-bottom:10px;">Referencia de mercado — 1 litro</div>
+      <div class="market-track">
+        <div class="market-dot" id="dot-camaron" style="border:3px solid var(--coral);"></div>
+        <div class="market-dot" id="dot-tilapia" style="border:3px solid var(--ocean-mid);"></div>
+        <div class="market-dot" id="dot-atun" style="border:3px solid var(--green);"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+        <span style="color:var(--green); font-weight:600;">$195 más barato</span>
+        <span style="color:var(--coral); font-weight:600;">$320 más caro</span>
+      </div>
+      <div class="market-legend" id="market-legend"></div>
+    </div>
+    <div class="detail-panel">
+      <div id="detail-content">
+        <div class="detail-empty">Toca un precio en la tabla de arriba para ver su desglose completo aquí.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INGREDIENTES -->
+  <div id="pane-ingredientes" style="display:none">
+    <div class="card">
+      <div class="card-title">Verduras y frutas</div>
+      <div class="ing-header">
+        <span>Ingrediente</span><span class="ta-right">$/kg</span>
+        <span class="ta-right merma-col">Merma</span>
+        <span class="ta-right">Rend.</span><span class="ta-right">$/100g neto</span>
+      </div>
+      <div id="veg-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Chiles</div>
+      <div class="ing-header">
+        <span>Ingrediente</span><span class="ta-right">$/kg</span>
+        <span class="ta-right merma-col">Merma</span>
+        <span class="ta-right">Rend.</span><span class="ta-right">$/100g neto</span>
+      </div>
+      <div id="chile-list"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);padding:4px 2px;">* El costo por 100g neto ya incluye la merma real medida en producción.</p>
+  </div>
+
+  <!-- PROTEÍNAS -->
+  <div id="pane-proteinas" style="display:none">
+    <div class="protein-grid" id="protein-cards"></div>
+    <div class="card">
+      <div class="card-title">Detalle de merma por proteína</div>
+      <div class="ing-header">
+        <span>Proteína</span><span class="ta-right">Bruto</span>
+        <span class="ta-right merma-col">Neto</span>
+        <span class="ta-right">Merma</span><span class="ta-right">$/100g</span>
+      </div>
+      <div id="protein-detail"></div>
+    </div>
+  </div>
+
+  <!-- OPERACIÓN -->
+  <div id="pane-operacion" style="display:none">
+    <div class="card">
+      <div class="card-title">Costos fijos mensuales</div>
+      <div id="operacion-fijos"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribución por litro producido</div>
+      <div id="operacion-litro"></div>
+    </div>
+  </div>
+</main>
+<footer>CataMar · Calculadora de costos · Uso interno</footer>
+
+<script>
+const DATA = {
+  mode: 'low',
+  vegs: [
+    { name: 'Cebolla morada', bruto: 1130, neto: 994,  pLow: 20,  pHigh: 44  },
+    { name: 'Jícama',         bruto: 1080, neto: 760,  pLow: 20,  pHigh: 35  },
+    { name: 'Coco',           bruto: 1035, neto: 900,  pLow: 105, pHigh: 120 },
+    { name: 'Fresa',          bruto: 1000, neto: 834,  pLow: 100, pHigh: 140 },
+    { name: 'Mango',          bruto: 1150, neto: 758,  pLow: 25,  pHigh: 40  },
+    { name: 'Zanahoria',      bruto: 1015, neto: 845,  pLow: 10,  pHigh: 30  },
+    { name: 'Limón (jugo)',   bruto: 1087, neto: 383,  pLow: 10,  pHigh: 55  },
+    { name: 'Aguacate',       bruto: 1050, neto: 657,  pLow: 45,  pHigh: 100 },
+    { name: 'Jitomate',       bruto: 1560, neto: 1016, pLow: 18,  pHigh: 48  },
+    { name: 'Pepino',         bruto: 1030, neto: 904,  pLow: 15,  pHigh: 25  },
+    { name: 'Clamato',        bruto: 1000, neto: 1000, pLow: 35,  pHigh: 35  },
+  ],
+  chiles: [
+    { name: 'Habanero',         bruto: 1000, neto: 900, pLow: 80,  pHigh: 200 },
+    { name: 'Chile serrano',    bruto: 1000, neto: 900, pLow: 25,  pHigh: 80  },
+    { name: 'Chile negro seco', bruto: 1000, neto: 850, pLow: 160, pHigh: 160 },
+    { name: 'Chile rojo seco',  bruto: 1000, neto: 850, pLow: 160, pHigh: 160 },
+  ],
+  proteins: [
+    { key: 'camaron', name: 'Camarón', bruto: 1000, neto: 833, pLow: 196, pHigh: 230 },
+    { key: 'tilapia', name: 'Tilapia', bruto: 1145, neto: 845, pLow: 105, pHigh: 115 },
+    { key: 'atun',    name: 'Atún',    bruto: 1084, neto: 897, pLow: 175, pHigh: 200 },
+  ],
+  recipes: {
+    camaron: {
+      litro:  { proteina:200, veg:[{ref:9,g:75},{ref:4,g:75},{ref:0,g:50}], chiles:[{ref:1,g:25}], liq:[{ref:6,g:25}] },
+      medio:  { proteina:150, veg:[{ref:9,g:56},{ref:4,g:56},{ref:0,g:38}], chiles:[{ref:1,g:19}], liq:[{ref:6,g:19}] },
+      cuarto: { proteina:70,  veg:[{ref:9,g:26},{ref:4,g:26},{ref:0,g:18}], chiles:[{ref:1,g:9}],  liq:[{ref:6,g:9}]  },
+    },
+    tilapia: {
+      litro:  { proteina:200, veg:[{ref:9,g:50},{ref:1,g:50},{ref:0,g:50},{ref:4,g:50},{ref:5,g:25},{ref:10,g:25}], chiles:[], liq:[{ref:6,g:50}] },
+      medio:  { proteina:150, veg:[{ref:9,g:38},{ref:1,g:38},{ref:0,g:38},{ref:4,g:38},{ref:5,g:19},{ref:10,g:19}], chiles:[], liq:[{ref:6,g:38}] },
+      cuarto: { proteina:70,  veg:[{ref:9,g:18},{ref:1,g:18},{ref:0,g:18},{ref:4,g:18},{ref:5,g:9}, {ref:10,g:9}],  chiles:[], liq:[{ref:6,g:18}] },
+    },
+    atun: {
+      litro:  { proteina:200, veg:[{ref:9,g:100},{ref:4,g:100},{ref:0,g:50},{ref:7,g:50}], chiles:[{ref:2,g:10}], liq:[{ref:6,g:50}] },
+      medio:  { proteina:150, veg:[{ref:9,g:75}, {ref:4,g:75}, {ref:0,g:38},{ref:7,g:38}], chiles:[{ref:2,g:8}],  liq:[{ref:6,g:38}] },
+      cuarto: { proteina:70,  veg:[{ref:9,g:35}, {ref:4,g:35}, {ref:0,g:18},{ref:7,g:18}], chiles:[{ref:2,g:4}],  liq:[{ref:6,g:18}] },
+    },
+  },
+  envases: {
+    litro:  { precioPaq: 1756, piezas: 500 },
+    medio:  { precioPaq: 1194, piezas: 500 },
+    cuarto: { precioPaq: 1032, piezas: 500 },
+  },
+  accesorios: { bolsa: 3.00, servilleta: 0.50, cubiertos: 1.50 },
+  tostadas: {
+    litro:  { horfi: 10, saladitas: 1, saladitas_precio_paq: 53, saladitas_piezas: 32 },
+    medio:  { horfi: 5,  saladitas: 0 },
+    cuarto: { horfi: 3,  saladitas: 0 },
+  },
+  costoTostadaHorfi: 24 / 25,
+  tostadaInd: {
+    gCeviche: 70,
+    gAguacateExtra: 20,
+    costoTostada: 24 / 25,
+    costoSalsa: 42 / 355 * 15,
+  },
+  operacion: {
+    renta:     3000,
+    telefono:  389,
+    luz:       375,
+    ayudante:  275,
+    diasMes:   26,
+    litrosDia: 15,
+  },
+  competencia: { min: 195, max: 320 },
+};
+
+const PROTEIN_LABELS = { camaron: 'Camarón', tilapia: 'Tilapia', atun: 'Atún' };
+const PRES_LABELS = { litro: '1 litro', medio: '½ litro', cuarto: '¼ litro', tostada: 'Tostada individual' };
+
+function price(item) { return DATA.mode === 'low' ? item.pLow : item.pHigh; }
+function merma(item) { return (((item.bruto - item.neto) / item.bruto) * 100).toFixed(1); }
+function rendimiento(item) { return ((item.neto / item.bruto) * 100).toFixed(1); }
+function cpg(item) { return price(item) / item.neto; }
+function cp100(item) { return (cpg(item) * 100).toFixed(2); }
+function badgeColor(m) { const v = parseFloat(m); return v < 10 ? 'badge-green' : v < 30 ? 'badge-amber' : 'badge-red'; }
+function fmt(n)    { return '$' + parseFloat(n).toFixed(2); }
+function fmtInt(n) { return '$' + Math.round(n); }
+function getMargin() { return parseInt(document.getElementById('margin-slider').value) / 100; }
+
+function costoEnvaseUnit(presKey) { const e = DATA.envases[presKey]; return e.precioPaq / e.piezas; }
+function costoAccesorios() { const a = DATA.accesorios; return a.bolsa + a.servilleta + a.cubiertos; }
+function costoTostadas(presKey) {
+  const t = DATA.tostadas[presKey];
+  let c = t.horfi * DATA.costoTostadaHorfi;
+  if (t.saladitas > 0) c += t.saladitas * (t.saladitas_precio_paq / t.saladitas_piezas);
+  return c;
+}
+function costoFijoMes() { const op = DATA.operacion; return op.renta + op.telefono + op.luz + (op.ayudante * op.diasMes); }
+function costoFijoLitro() { const op = DATA.operacion; return costoFijoMes() / (op.diasMes * op.litrosDia); }
+
+function calcPres(proteinKey, presKey) {
+  const rec = DATA.recipes[proteinKey][presKey];
+  const p   = DATA.proteins.find(x => x.key === proteinKey);
+  const costoProteina = cpg(p) * rec.proteina;
+  let costoVeg = 0;
+  const detalleVeg = [];
+  [...rec.veg, ...rec.liq].forEach(rv => {
+    const v = DATA.vegs[rv.ref]; const c = cpg(v) * rv.g;
+    costoVeg += c; detalleVeg.push({ name: v.name, g: rv.g, costo: c });
+  });
+  rec.chiles.forEach(rv => {
+    const v = DATA.chiles[rv.ref]; const c = cpg(v) * rv.g;
+    costoVeg += c; detalleVeg.push({ name: v.name, g: rv.g, costo: c });
+  });
+  const costoDirecto  = costoProteina + costoVeg;
+  const envase        = costoEnvaseUnit(presKey);
+  const acc           = costoAccesorios();
+  const tostadas      = costoTostadas(presKey);
+  const factorFijo    = presKey === 'litro' ? 1 : presKey === 'medio' ? 0.5 : 0.25;
+  const fijo          = costoFijoLitro() * factorFijo;
+  const total         = costoDirecto + envase + acc + tostadas + fijo;
+  return { proteinName: p.name, costoProteina, costoVeg, detalleVeg, costoDirecto, envase, acc, tostadas, fijo, total, grProteina: rec.proteina };
+}
+
+function calcTostadaInd(proteinKey) {
+  const t = DATA.tostadaInd;
+  const p = DATA.proteins.find(x => x.key === proteinKey);
+  const rec = DATA.recipes[proteinKey].cuarto;
+  const costoProteina = cpg(p) * t.gCeviche;
+  let costoVeg = 0;
+  const detalleVeg = [];
+  const totalGRec = [...rec.veg, ...rec.liq, ...rec.chiles].reduce((s,r) => s+r.g, 0);
+  const factor = totalGRec > 0 ? (t.gCeviche / (rec.proteina + totalGRec)) * (t.gCeviche / rec.proteina) : 0;
+  [...rec.veg, ...rec.liq].forEach(rv => {
+    const v = DATA.vegs[rv.ref]; const g = Math.max(1, Math.round(rv.g * factor)); const c = cpg(v) * g;
+    costoVeg += c; detalleVeg.push({ name: v.name, g, costo: c });
+  });
+  rec.chiles.forEach(rv => {
+    const v = DATA.chiles[rv.ref]; const g = Math.max(1, Math.round(rv.g * factor)); const c = cpg(v) * g;
+    costoVeg += c; detalleVeg.push({ name: v.name, g, costo: c });
+  });
+  const costoAguacate = cpg(DATA.vegs[7]) * t.gAguacateExtra;
+  const costoDirecto  = costoProteina + costoVeg + costoAguacate;
+  const costoTostada  = t.costoTostada;
+  const costoSalsa    = t.costoSalsa;
+  const acc           = DATA.accesorios.servilleta + DATA.accesorios.cubiertos;
+  const fijo          = costoFijoLitro() * 0.25;
+  const total         = costoDirecto + costoTostada + costoSalsa + acc + fijo;
+  return { proteinName: p.name, costoProteina, gCeviche: t.gCeviche, detalleVeg, costoAguacate, gAguacateExtra: t.gAguacateExtra, costoDirecto, costoTostada, costoSalsa, acc, fijo, total };
+}
+
+// ─── RENDER RESUMEN ───────────────────────────────────────────────
+window.lastSelected = null;
+
+function renderResumen() {
+  const margin = getMargin();
+  const cols = ['camaron', 'tilapia', 'atun'];
+  const rows = [
+    { key: 'litro',  label: '1 litro' },
+    { key: 'medio',  label: '½ litro' },
+    { key: 'cuarto', label: '¼ litro' },
+    { key: 'tostada',label: '🌮 Tostada' },
+  ];
+
+  document.getElementById('summary-body').innerHTML = rows.map(r => {
+    const cells = cols.map(c => {
+      const data = r.key === 'tostada' ? calcTostadaInd(c) : calcPres(c, r.key);
+      const pvp = data.total / (1 - margin);
+      const isSel = lastSelected && lastSelected.p === c && lastSelected.k === r.key;
+      return `<td class="${isSel ? 'cell-selected' : ''}" onclick="showDetail('${c}','${r.key}')">
+        <div class="cell-cost">costo ${fmtInt(data.total)}</div>
+        <div class="cell-price">${fmtInt(pvp)}</div>
+      </td>`;
+    }).join('');
+    return `<tr class="${r.key === 'tostada' ? 'row-tostada' : ''}"><td>${r.label}</td>${cells}</tr>`;
+  }).join('');
+
+  // Market bar
+  const cMin = DATA.competencia.min, cMax = DATA.competencia.max;
+  cols.forEach(c => {
+    const data = calcPres(c, 'litro');
+    const pvp = data.total / (1 - margin);
+    const pct = Math.min(Math.max((pvp - cMin) / (cMax - cMin) * 100, 0), 100);
+    document.getElementById('dot-' + c).style.left = pct + '%';
+  });
+  const dotColors = { camaron: 'var(--coral)', tilapia: 'var(--ocean-mid)', atun: 'var(--green)' };
+  document.getElementById('market-legend').innerHTML = cols.map(c => {
+    const data = calcPres(c, 'litro');
+    const pvp = data.total / (1 - margin);
+    return `<span><span class="dot" style="background:${dotColors[c]}"></span>${PROTEIN_LABELS[c]} ${fmtInt(pvp)}</span>`;
+  }).join('');
+}
+
+function showDetail(proteinKey, presKey) {
+  window.lastSelected = { p: proteinKey, k: presKey };
+  const margin = getMargin();
+  const isTostada = presKey === 'tostada';
+  const data = isTostada ? calcTostadaInd(proteinKey) : calcPres(proteinKey, presKey);
+  const pvp = data.total / (1 - margin);
+
+  let rows = '';
+  if (isTostada) {
+    rows += `<tr><td>${data.proteinName} (${data.gCeviche}g limpio)</td><td>${fmt(data.costoProteina)}</td></tr>`;
+    data.detalleVeg.forEach(d => { rows += `<tr><td>${d.name} (${d.g}g)</td><td>${fmt(d.costo)}</td></tr>`; });
+    rows += `<tr><td>Aguacate encima (${data.gAguacateExtra}g)</td><td>${fmt(data.costoAguacate)}</td></tr>`;
+    rows += `<tr class="subtotal"><td>Subtotal ingredientes</td><td>${fmt(data.costoDirecto)}</td></tr>`;
+    rows += `<tr><td>Tostada Horfi Horneada</td><td>${fmt(data.costoTostada)}</td></tr>`;
+    rows += `<tr><td>Salsa (≈15ml)</td><td>${fmt(data.costoSalsa)}</td></tr>`;
+    rows += `<tr><td>Servilleta + cubiertos</td><td>${fmt(data.acc)}</td></tr>`;
+    rows += `<tr><td>Costos fijos prorrateados</td><td>${fmt(data.fijo)}</td></tr>`;
+  } else {
+    rows += `<tr><td>${data.proteinName} (${data.grProteina}g limpio)</td><td>${fmt(data.costoProteina)}</td></tr>`;
+    data.detalleVeg.forEach(d => { rows += `<tr><td>${d.name} (${d.g}g)</td><td>${fmt(d.costo)}</td></tr>`; });
+    rows += `<tr class="subtotal"><td>Subtotal ingredientes</td><td>${fmt(data.costoDirecto)}</td></tr>`;
+    rows += `<tr><td>Envase contenedor</td><td>${fmt(data.envase)}</td></tr>`;
+    rows += `<tr><td>Bolsa + servilleta + cubiertos</td><td>${fmt(data.acc)}</td></tr>`;
+    const tostLabel = presKey === 'litro' ? '10 tostadas Horfi + 1 paq. Saladitas' : presKey === 'medio' ? '5 tostadas Horfi' : '3 tostadas Horfi';
+    rows += `<tr><td>${tostLabel}</td><td>${fmt(data.tostadas)}</td></tr>`;
+    rows += `<tr><td>Costos fijos (renta + luz + tel. + ayudante)</td><td>${fmt(data.fijo)}</td></tr>`;
+  }
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-header">
+      <div>
+        <span class="detail-label">${PRES_LABELS[presKey]}</span>
+        <span class="detail-sub" style="display:block; margin-top:2px;">${data.proteinName} · margen ${Math.round(margin*100)}%</span>
+      </div>
+      <button onclick="closeDetail()" aria-label="Cerrar desglose" style="background:transparent; border:none; color:white; font-size:20px; line-height:1; cursor:pointer; padding:4px 8px; opacity:0.8;">×</button>
+    </div>
+    <div class="metrics-row">
+      <div class="metric">
+        <div class="metric-label">Costo ingredientes</div>
+        <div class="metric-val">${fmtInt(data.costoDirecto)}</div>
+        <div class="metric-sub">${isTostada ? 'ceviche + aguacate' : 'proteína + verduras'}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Costo total</div>
+        <div class="metric-val">${fmtInt(data.total)}</div>
+        <div class="metric-sub">todo incluido</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Precio sugerido</div>
+        <div class="metric-val green">${fmtInt(pvp)}</div>
+        <div class="metric-sub">margen ${Math.round(margin*100)}%</div>
+      </div>
+    </div>
+    <table class="detail-table">
+      ${rows}
+      <tr class="total"><td>Total costo</td><td>${fmt(data.total)}</td></tr>
+    </table>`;
+
+  renderResumen();
+  document.getElementById('detail-content').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeDetail() {
+  window.lastSelected = null;
+  document.getElementById('detail-content').innerHTML =
+    '<div class="detail-empty">Toca un precio en la tabla de arriba para ver su desglose completo aquí.</div>';
+  renderResumen();
+}
+
+// ─── RENDER INGREDIENTES ──────────────────────────────────────────
+function renderIngRow(item) {
+  const m = merma(item);
+  return `<div class="ing-row">
+    <span class="ing-name">${item.name}</span>
+    <span class="ta-right" style="color:var(--text-secondary)">$${price(item)}</span>
+    <span class="ta-right merma-col"><span class="badge ${badgeColor(m)}">${m}%</span></span>
+    <span class="ta-right" style="color:var(--text-secondary)">${rendimiento(item)}%</span>
+    <span class="cost-val">$${cp100(item)}</span>
+  </div>`;
+}
+function renderVeg() {
+  document.getElementById('veg-list').innerHTML   = DATA.vegs.map(renderIngRow).join('');
+  document.getElementById('chile-list').innerHTML = DATA.chiles.map(renderIngRow).join('');
+}
+
+// ─── RENDER PROTEÍNAS ─────────────────────────────────────────────
+function renderProteins() {
+  document.getElementById('protein-cards').innerHTML = DATA.proteins.map(p => {
+    return `<div class="protein-card">
+      <div class="protein-card-name">${p.name}</div>
+      <div class="protein-card-cost">$${(cpg(p)*1000).toFixed(0)}</div>
+      <div class="protein-card-sub">por kg limpio</div>
+      <div class="protein-card-merma">Merma real: ${merma(p)}%</div>
+    </div>`;
+  }).join('');
+  document.getElementById('protein-detail').innerHTML = DATA.proteins.map(p => {
+    const m = merma(p);
+    return `<div class="ing-row">
+      <span class="ing-name">${p.name}</span>
+      <span class="ta-right" style="color:var(--text-secondary)">${p.bruto}g</span>
+      <span class="ta-right merma-col" style="color:var(--text-secondary)">${p.neto}g</span>
+      <span class="ta-right"><span class="badge ${badgeColor(m)}">${m}%</span></span>
+      <span class="cost-val">$${cp100(p)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── RENDER OPERACIÓN ─────────────────────────────────────────────
+function renderOperacion() {
+  const op       = DATA.operacion;
+  const ayMes    = op.ayudante * op.diasMes;
+  const totalMes = costoFijoMes();
+  const litrosMes = op.diasMes * op.litrosDia;
+  const fijoLitro = costoFijoLitro();
+
+  document.getElementById('operacion-fijos').innerHTML = `
+    <table class="detail-table">
+      <tr><td>Renta local</td><td>${fmt(op.renta)}</td></tr>
+      <tr><td>Teléfono</td><td>${fmt(op.telefono)}</td></tr>
+      <tr><td>Luz ($750 bimestral ÷ 2)</td><td>${fmt(op.luz)}</td></tr>
+      <tr><td>Ayudante ($${op.ayudante}/día × ${op.diasMes} días)</td><td>${fmt(ayMes)}</td></tr>
+      <tr class="total"><td>Total costos fijos / mes</td><td>${fmt(totalMes)}</td></tr>
+    </table>`;
+
+  document.getElementById('operacion-litro').innerHTML = `
+    <table class="detail-table">
+      <tr><td>Costo fijo mensual total</td><td>${fmt(totalMes)}</td></tr>
+      <tr><td>Litros producidos al mes (${op.litrosDia}/día × ${op.diasMes} días)</td><td>${litrosMes} L</td></tr>
+      <tr class="total"><td>Costo fijo por litro</td><td>${fmt(fijoLitro)}</td></tr>
+    </table>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:10px;padding:0 2px;">
+      * Este costo ya está incluido automáticamente en el desglose de cada presentación.
+    </p>`;
+}
+
+// ─── NAVEGACIÓN ───────────────────────────────────────────────────
+function setMode(m) {
+  DATA.mode = m;
+  document.getElementById('btn-low').className  = 'mode-btn' + (m==='low'  ? ' active' : '');
+  document.getElementById('btn-high').className = 'mode-btn' + (m==='high' ? ' active' : '');
+  renderAll();
+}
+function showTab(t) {
+  ['resumen','ingredientes','proteinas','operacion'].forEach(id => {
+    document.getElementById('pane-'+id).style.display = id===t ? '' : 'none';
+    document.getElementById('tab-'+id).className = 'tab-btn' + (id===t ? ' active' : '');
+  });
+}
+function renderAll() {
+  renderResumen();
+  renderVeg();
+  renderProteins();
+  renderOperacion();
+  if (window.lastSelected) showDetail(lastSelected.p, lastSelected.k);
+}
+renderAll();
+</script>
+</body>
+</html>
